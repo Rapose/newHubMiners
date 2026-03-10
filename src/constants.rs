@@ -27,3 +27,8 @@ pub const SEED_EQUIPMENT: &[u8] = b"equipment_v1";
 pub const SEED_EQUIPMENT_INVENTORY: &[u8] = b"equipment_inventory_v1";
 
 pub const MAX_ITEM_LEVEL: usize = 10;
+
+pub const SEED_LISTING: &[u8] = b"listing_v1";
+
+pub const MARKETPLACE_FEE_BPS: u64 = 500;
+

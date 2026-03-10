@@ -72,6 +72,9 @@ pub struct GlobalMiningUnassignLand<'info> {
 
     #[account(mut)]
     pub miner_state: Account<'info, MinerState>,
+
+    #[account(mut)]
+    pub land_state: Account<'info, LandState>,
 }
 
 pub fn handler_unassign_land(ctx: Context<GlobalMiningUnassignLand>) -> Result<()> {
@@ -81,7 +84,15 @@ pub fn handler_unassign_land(ctx: Context<GlobalMiningUnassignLand>) -> Result<(
         MoeError::Unauthorized
     );
 
+    require!(!miner.listed, MoeError::AssetListedLocked);
+
     let prev_land = miner.allocated_land;
+    let land = &mut ctx.accounts.land_state;
+    require!(land.key() == prev_land, MoeError::InvalidMinerRef);
+    require!(!land.listed, MoeError::AssetListedLocked);
+    require!(land.owner == ctx.accounts.owner.key(), MoeError::Unauthorized);
+
+    land.allocated_miners_count = land.allocated_miners_count.saturating_sub(1);
     miner.allocated_land = Pubkey::default();
 
     msg!(
@@ -101,19 +112,24 @@ pub struct GlobalMiningAssignLand<'info> {
     #[account(mut)]
     pub miner_state: Account<'info, MinerState>,
 
+    #[account(mut)]
     pub land_state: Account<'info, LandState>,
 }
 
 pub fn handler_assign_land(ctx: Context<GlobalMiningAssignLand>) -> Result<()> {
     let miner = &mut ctx.accounts.miner_state;
-    let land = &ctx.accounts.land_state;
+    let land_key = ctx.accounts.land_state.key();
+    let land_element = ctx.accounts.land_state.element;
+
+    require!(!miner.listed, MoeError::AssetListedLocked);
+    require!(!ctx.accounts.land_state.listed, MoeError::AssetListedLocked);
 
     require!(
         miner.owner == ctx.accounts.owner.key(),
         MoeError::Unauthorized
     );
     require!(
-        land.owner == ctx.accounts.owner.key(),
+        ctx.accounts.land_state.owner == ctx.accounts.owner.key(),
         MoeError::Unauthorized
     );
     require!(
@@ -121,15 +137,17 @@ pub fn handler_assign_land(ctx: Context<GlobalMiningAssignLand>) -> Result<()> {
         MoeError::Unauthorized
     );
 
-    miner.allocated_land = land.key();
+    let land_mut = &mut ctx.accounts.land_state;
+    land_mut.allocated_miners_count = land_mut.allocated_miners_count.saturating_add(1);
+    miner.allocated_land = land_key;
 
     msg!(
         "GM_ASSIGN owner={} miner={} land={} miner_element={} land_element={}",
         ctx.accounts.owner.key(),
         miner.key(),
-        land.key(),
+        land_key,
         miner.element,
-        land.element
+        land_element
     );
 
     Ok(())
@@ -470,6 +488,8 @@ pub fn handler_register_miner(ctx: Context<GlobalMiningRegisterMiner>) -> Result
 
     require!(miner.owner == ctx.accounts.owner.key(), MoeError::Unauthorized);
 
+    require!(!miner.listed, MoeError::AssetListedLocked);
+
     mm.owner = ctx.accounts.owner.key();
     mm.miner = miner.key();
     mm.week_index = g.week_index;
@@ -523,6 +543,7 @@ pub struct GlobalMiningUpdate<'info> {
         constraint = miner_state.allocated_land != Pubkey::default() @ MoeError::InvalidMinerRef,
         constraint = land_state.key() == miner_state.allocated_land @ MoeError::InvalidMinerRef
     )]
+    #[account(mut)]
     pub land_state: Account<'info, LandState>,
 }
 
@@ -651,6 +672,9 @@ fn update_inner_strict(
 pub fn handler_update(ctx: Context<GlobalMiningUpdate>) -> Result<()> {
     let miner_key = ctx.accounts.miner_state.key();
     let land_key = ctx.accounts.land_state.key();
+
+    require!(!ctx.accounts.miner_state.listed, MoeError::AssetListedLocked);
+    require!(!ctx.accounts.land_state.listed, MoeError::AssetListedLocked);
 
     validate_miner_land_link_strict(
         &ctx.accounts.miner_state,

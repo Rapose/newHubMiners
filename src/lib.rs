@@ -7,9 +7,9 @@ pub mod instructions;
 pub mod state;
 pub mod utils;
 
-use instructions::*;
 use crate::instructions::affinity::ComputeAffinity;
 use instructions::equipment_inventory::EquipmentSlotKind;
+use instructions::*;
 
 declare_id!("5LRTVxfrJmec3PWmNVAnis3ZgAYVYJEMsqJN3Xnhnq79");
 
@@ -26,38 +26,92 @@ pub mod moe_anchor_v1 {
     }
 
     pub fn equipment_replace_hand(ctx: Context<EquipmentReplaceHand>, new_level: u8) -> Result<()> {
-    instructions::equipment::handler_replace_hand(ctx, new_level)
-}
+        instructions::equipment::handler_replace_hand(ctx, new_level)
+    }
 
     pub fn equipment_replace_head(ctx: Context<EquipmentReplaceHead>, new_level: u8) -> Result<()> {
-    instructions::equipment::handler_replace_head(ctx, new_level)
-}
+        instructions::equipment::handler_replace_head(ctx, new_level)
+    }
 
     pub fn equipment_remelt_hand(ctx: Context<EquipmentRemeltHand>, base_level: u8) -> Result<()> {
-    instructions::equipment::handler_remelt_hand(ctx, base_level)
-}
+        instructions::equipment::handler_remelt_hand(ctx, base_level)
+    }
 
     pub fn equipment_remelt_head(ctx: Context<EquipmentRemeltHead>, base_level: u8) -> Result<()> {
-    instructions::equipment::handler_remelt_head(ctx, base_level)
-}
+        instructions::equipment::handler_remelt_head(ctx, base_level)
+    }
 
-pub fn equipment_inventory_grant_item(
-    ctx: Context<EquipmentInventoryGrantItem>,
-    slot: EquipmentSlotKind,
-    level: u8,
-    amount: u16,
-    remelted: bool,
-    broken: bool,
-) -> Result<()> {
-    instructions::equipment_inventory::handler_grant_item(
-        ctx,
-        slot,
-        level,
-        amount,
-        remelted,
-        broken,
-    )
-}
+    pub fn equipment_inventory_grant_item(
+        ctx: Context<EquipmentInventoryGrantItem>,
+        slot: EquipmentSlotKind,
+        level: u8,
+        amount: u16,
+        remelted: bool,
+        broken: bool,
+    ) -> Result<()> {
+        instructions::equipment_inventory::handler_grant_item(
+            ctx, slot, level, amount, remelted, broken,
+        )
+    }
+
+    pub fn marketplace_create_miner_listing(
+        ctx: Context<MarketplaceCreateMinerListing>,
+        price_ess: u64,
+    ) -> Result<()> {
+        instructions::marketplace::handler_create_miner_listing(ctx, price_ess)
+    }
+
+    pub fn marketplace_create_land_listing(
+        ctx: Context<MarketplaceCreateLandListing>,
+        price_ess: u64,
+    ) -> Result<()> {
+        instructions::marketplace::handler_create_land_listing(ctx, price_ess)
+    }
+
+    pub fn marketplace_create_equipment_listing(
+        ctx: Context<MarketplaceCreateEquipmentListing>,
+        bucket: u8,
+        level: u8,
+        amount: u16,
+        price_ess: u64,
+    ) -> Result<()> {
+        instructions::marketplace::handler_create_equipment_listing(
+            ctx, bucket, level, amount, price_ess,
+        )
+    }
+
+    pub fn marketplace_cancel_miner_listing(
+        ctx: Context<MarketplaceCancelMinerListing>,
+    ) -> Result<()> {
+        instructions::marketplace::handler_cancel_miner_listing(ctx)
+    }
+
+    pub fn marketplace_cancel_land_listing(
+        ctx: Context<MarketplaceCancelLandListing>,
+    ) -> Result<()> {
+        instructions::marketplace::handler_cancel_land_listing(ctx)
+    }
+
+    pub fn marketplace_cancel_equipment_listing(
+        ctx: Context<MarketplaceCancelEquipmentListing>,
+    ) -> Result<()> {
+        instructions::marketplace::handler_cancel_equipment_listing(ctx)
+    }
+
+    pub fn marketplace_buy_miner_listing(ctx: Context<MarketplaceBuyMinerListing>) -> Result<()> {
+        instructions::marketplace::handler_buy_miner_listing(ctx)
+    }
+
+    pub fn marketplace_buy_land_listing(ctx: Context<MarketplaceBuyLandListing>) -> Result<()> {
+        instructions::marketplace::handler_buy_land_listing(ctx)
+    }
+
+    pub fn marketplace_buy_equipment_listing(
+        ctx: Context<MarketplaceBuyEquipmentListing>,
+    ) -> Result<()> {
+        instructions::marketplace::handler_buy_equipment_listing(ctx)
+    }
+
     pub fn global_mining_freeze_week(ctx: Context<GlobalMiningFreezeWeek>) -> Result<()> {
         instructions::global_mining::handler_freeze_week(ctx)
     }
@@ -176,12 +230,12 @@ pub fn equipment_inventory_grant_item(
     }
 
     pub fn compute_affinity(
-    ctx: Context<ComputeAffinity>,
-    land_element: u8,
-    miner_element: u8,
-) -> Result<()> {
-    instructions::affinity::handler_compute_affinity(ctx, land_element, miner_element)
-}
+        ctx: Context<ComputeAffinity>,
+        land_element: u8,
+        miner_element: u8,
+    ) -> Result<()> {
+        instructions::affinity::handler_compute_affinity(ctx, land_element, miner_element)
+    }
 
     pub fn lootbox_miner_init(ctx: Context<LootboxMinerInit>, lootbox_id: u64) -> Result<()> {
         instructions::lootbox_miner::handler_init(ctx, lootbox_id)

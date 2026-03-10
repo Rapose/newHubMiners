@@ -15,11 +15,12 @@ pub struct MinerState {
     pub background: u8,
 
     pub allocated_land: Pubkey,
+    pub listed: bool,
 
     pub created_at: i64,
     pub bump: u8,
 }
 
 impl MinerState {
-    pub const LEN: usize = 8 + 8 + 32 + 1 + 1 + 8 + 1 + 1 + 1 + 1 + 1 + 1 + 32 + 8 + 1;
+    pub const LEN: usize = 8 + 8 + 32 + 1 + 1 + 8 + 1 + 1 + 1 + 1 + 1 + 1 + 32 + 1 + 8 + 1;
 }

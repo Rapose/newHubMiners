@@ -89,6 +89,34 @@ pub enum MoeError {
     #[msg("No item available in inventory")]
     NoItemAvailable,
     
+
+    #[msg("Listing is inactive")]
+    ListingInactive,
+    #[msg("Invalid listing")]
+    InvalidListing,
+    #[msg("Only seller can cancel listing")]
+    NotSeller,
+    #[msg("Self purchase not allowed")]
+    SelfPurchaseNotAllowed,
+    #[msg("Listing price must be greater than zero")]
+    ListingPriceInvalid,
+    #[msg("Asset already listed")]
+    AssetAlreadyListed,
+    #[msg("Asset busy")]
+    AssetBusy,
+    #[msg("Miner must be unassigned for listing")]
+    MinerMustBeUnassignedForListing,
+    #[msg("Land has allocated miners")]
+    LandHasAllocatedMiners,
+    #[msg("Insufficient equipment inventory")]
+    InsufficientEquipmentInventory,
+    #[msg("Equipment bucket mismatch")]
+    EquipmentBucketMismatch,
+    #[msg("Invalid equipment amount")]
+    InvalidEquipmentAmount,
+    #[msg("Asset is listed and locked")]
+    AssetListedLocked,
+
     #[msg("Math overflow")]
     MathOverflow,
 }

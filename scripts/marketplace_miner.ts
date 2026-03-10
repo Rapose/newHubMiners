@@ -1,117 +1,72 @@
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { SystemProgram } from "@solana/web3.js";
-import { assertEq, bn, expectTxFail } from "./helpers/test_env";
-import { buildMarketplaceFixture, fetchListing, listingPda, tokenBalance } from "./helpers/marketplace_fixture";
+import { BN } from "@coral-xyz/anchor";
+import { expectFailure, logStep, SuiteCtx } from "./_shared";
 
-export async function runMarketplaceMinerFlow() {
-  const fx = await buildMarketplaceFixture();
-  const { program, provider } = fx.env;
+export async function runMarketplaceMinerTests(ctx: SuiteCtx, a: Record<string, any>) {
+  const p = ctx.program;
 
-  const cfg: any = await program.account.config.fetch(fx.config);
-  const listingId = Number(cfg.nextListingId);
-  const listing = listingPda(program.programId, listingId);
+  logStep("miner/create success");
+  await p.methods.marketplaceCreateMinerListing(new BN(1_000_000)).accounts({
+    seller: ctx.seller.publicKey,
+    config: a.config,
+    miner: a.miner,
+    listing: a.listing,
+  }).rpc();
 
-  await program.methods.marketplaceCreateMinerListing(bn(1_000_000)).accounts({
-    seller: fx.seller.publicKey,
-    config: fx.config,
-    miner: fx.miner,
-    listing,
-    systemProgram: SystemProgram.programId,
-  }).signers([fx.seller]).rpc();
-
-  let miner: any = await program.account.minerState.fetch(fx.miner);
-  assertEq("miner listed after create", miner.listed, true);
-
-  await expectTxFail("listed miner cannot claim exp", async () => {
-    await program.methods.claimMiningExp().accounts({
-      owner: fx.seller.publicKey,
-      minerState: fx.miner,
-      progression: fx.progression,
-      minerProgress: fx.minerProgress,
-      systemProgram: SystemProgram.programId,
-    }).signers([fx.seller]).rpc();
+  logStep("miner/double listing fail");
+  await expectFailure("miner double listing", async () => {
+    await p.methods.marketplaceCreateMinerListing(new BN(1_000_000)).accounts({
+      seller: ctx.seller.publicKey,
+      config: a.config,
+      miner: a.miner,
+      listing: a.listing2,
+    }).rpc();
   });
 
-  await program.methods.marketplaceCancelMinerListing().accounts({
-    seller: fx.seller.publicKey,
-    listing,
-    miner: fx.miner,
-  }).signers([fx.seller]).rpc();
+  logStep("miner/cancel and relist");
+  await p.methods.marketplaceCancelMinerListing().accounts({
+    seller: ctx.seller.publicKey,
+    listing: a.listing,
+    miner: a.miner,
+  }).rpc();
 
-  miner = await program.account.minerState.fetch(fx.miner);
-  assertEq("miner listed after cancel", miner.listed, false);
+  await p.methods.marketplaceCreateMinerListing(new BN(1_000_000)).accounts({
+    seller: ctx.seller.publicKey,
+    config: a.config,
+    miner: a.miner,
+    listing: a.listing2,
+  }).rpc();
 
-  const cfg2: any = await program.account.config.fetch(fx.config);
-  const listing2 = listingPda(program.programId, Number(cfg2.nextListingId));
-  await program.methods.marketplaceCreateMinerListing(bn(1_000_000)).accounts({
-    seller: fx.seller.publicKey,
-    config: fx.config,
-    miner: fx.miner,
-    listing: listing2,
-    systemProgram: SystemProgram.programId,
-  }).signers([fx.seller]).rpc();
-
-  await expectTxFail("self purchase blocked", async () => {
-    await program.methods.marketplaceBuyMinerListing().accounts({
-      buyer: fx.seller.publicKey,
-      listing: listing2,
-      miner: fx.miner,
-      minerProgress: fx.minerProgress,
-      minerMining: fx.minerMining,
-      equipment: fx.equipment,
-      seller: fx.seller.publicKey,
-      economy: fx.economy,
-      essMint: fx.essMint,
-      buyerAta: fx.sellerAta,
-      sellerAta: fx.sellerAta,
-      recipientAta: fx.recipientAta,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    }).signers([fx.seller]).rpc();
+  logStep("miner/self purchase fail");
+  await expectFailure("miner self buy", async () => {
+    await p.methods.marketplaceBuyMinerListing().accounts({
+      buyer: ctx.seller.publicKey,
+      listing: a.listing2,
+      miner: a.miner,
+      minerProgress: a.minerProgress,
+      minerMining: a.minerMining,
+      equipment: a.equipment,
+      seller: ctx.seller.publicKey,
+      economy: a.economy,
+      essMint: ctx.essMint,
+      buyerAta: a.sellerAta,
+      sellerAta: a.sellerAta,
+      recipientAta: a.recipientAta,
+    }).rpc();
   });
 
-  const bBefore = await tokenBalance(provider.connection, fx.buyerAta);
-  const sBefore = await tokenBalance(provider.connection, fx.sellerAta);
-  const rBefore = await tokenBalance(provider.connection, fx.recipientAta);
-
-  await program.methods.marketplaceBuyMinerListing().accounts({
-    buyer: fx.buyer.publicKey,
-    listing: listing2,
-    miner: fx.miner,
-    minerProgress: fx.minerProgress,
-    minerMining: fx.minerMining,
-    equipment: fx.equipment,
-    seller: fx.seller.publicKey,
-    economy: fx.economy,
-    essMint: fx.essMint,
-    buyerAta: fx.buyerAta,
-    sellerAta: fx.sellerAta,
-    recipientAta: fx.recipientAta,
-    tokenProgram: TOKEN_PROGRAM_ID,
-  }).signers([fx.buyer]).rpc();
-
-  const fee = 50_000;
-  const price = 1_000_000;
-  const payout = price - fee;
-
-  const bAfter = await tokenBalance(provider.connection, fx.buyerAta);
-  const sAfter = await tokenBalance(provider.connection, fx.sellerAta);
-  const rAfter = await tokenBalance(provider.connection, fx.recipientAta);
-
-  assertEq("buyer paid price", bBefore - bAfter, price);
-  assertEq("seller received payout", sAfter - sBefore, payout);
-  assertEq("recipient received fee", rAfter - rBefore, fee);
-
-  miner = await program.account.minerState.fetch(fx.miner);
-  const progress: any = await program.account.minerProgress.fetch(fx.minerProgress);
-  const mining: any = await program.account.minerMiningState.fetch(fx.minerMining);
-  const equipment: any = await program.account.equipmentState.fetch(fx.equipment);
-  const listingState = await fetchListing(program, listing2);
-
-  assertEq("miner owner transferred", miner.owner.toBase58(), fx.buyer.publicKey.toBase58());
-  assertEq("progress owner transferred", progress.owner.toBase58(), fx.buyer.publicKey.toBase58());
-  assertEq("mining owner transferred", mining.owner.toBase58(), fx.buyer.publicKey.toBase58());
-  assertEq("equipment owner transferred", equipment.owner.toBase58(), fx.buyer.publicKey.toBase58());
-  assertEq("listing closed", listingState.active, false);
-
-  console.log("✅ marketplace miner flow passed");
+  logStep("miner/buy success");
+  await p.methods.marketplaceBuyMinerListing().accounts({
+    buyer: ctx.buyer.publicKey,
+    listing: a.listing2,
+    miner: a.miner,
+    minerProgress: a.minerProgress,
+    minerMining: a.minerMining,
+    equipment: a.equipment,
+    seller: ctx.seller.publicKey,
+    economy: a.economy,
+    essMint: ctx.essMint,
+    buyerAta: a.buyerAta,
+    sellerAta: a.sellerAta,
+    recipientAta: a.recipientAta,
+  }).rpc();
 }

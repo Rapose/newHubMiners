@@ -64,6 +64,7 @@ pub fn handler(ctx: Context<MinerLevelUp>) -> Result<()> {
     let prog = &mut ctx.accounts.miner_progress;
 
     require!(miner.owner == owner, MoeError::Unauthorized);
+    require!(!miner.listed, MoeError::AssetListedLocked);
 
     require!(prog.owner == owner, MoeError::Unauthorized);
     require!(prog.miner == miner.key(), MoeError::InvalidMinerProgress);

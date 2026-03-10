@@ -53,6 +53,7 @@ pub fn handler_create_miner_debug(
     miner.item = 0;
     miner.background = 0;
     miner.allocated_land = Pubkey::default();
+    miner.listed = false;
     miner.created_at = Clock::get()?.unix_timestamp;
     miner.bump = ctx.bumps.miner_state;
 
@@ -102,6 +103,8 @@ pub fn handler_create_land_debug(
     land.rarity = rarity;
     land.element = element;
     land.slots = slots;
+    land.listed = false;
+    land.allocated_miners_count = 0;
     land.created_at = Clock::get()?.unix_timestamp;
     land.bump = ctx.bumps.land_state;
 

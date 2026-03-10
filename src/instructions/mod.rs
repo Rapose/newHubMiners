@@ -29,3 +29,6 @@ pub mod equipment;
 pub use equipment::*;
 pub mod equipment_inventory;
 pub use equipment_inventory::*;
+
+pub mod marketplace;
+pub use marketplace::*;

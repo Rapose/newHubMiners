@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::MoeError;
 use crate::state::{MinerProgress, MinerState, ProgressionConfig};
-use crate::utils::seeds::{SEED_MINER_PROGRESS, SEED_PROGRESSION};
 use crate::utils::progression_math::exp_required;
+use crate::utils::seeds::{SEED_MINER_PROGRESS, SEED_PROGRESSION};
 
 #[derive(Accounts)]
 pub struct ClaimMiningExp<'info> {
@@ -35,6 +35,7 @@ pub fn handler(ctx: Context<ClaimMiningExp>) -> Result<()> {
     let prog = &mut ctx.accounts.miner_progress;
 
     require!(miner.owner == owner, MoeError::Unauthorized);
+    require!(!miner.listed, MoeError::AssetListedLocked);
 
     require!(prog.owner == owner, MoeError::Unauthorized);
     require!(prog.miner == miner.key(), MoeError::InvalidMinerProgress);
@@ -58,21 +59,21 @@ pub fn handler(ctx: Context<ClaimMiningExp>) -> Result<()> {
     }
 
     let r = miner.rarity as usize;
-require!(r < 5, MoeError::InvalidRarity);
+    require!(r < 5, MoeError::InvalidRarity);
 
-let need_exp = exp_required(cfg, r, prog.level);
+    let need_exp = exp_required(cfg, r, prog.level);
 
-if prog.exp >= need_exp {
-    prog.last_exp_claim_ts = now;
-    return Ok(());
-}
+    if prog.exp >= need_exp {
+        prog.last_exp_claim_ts = now;
+        return Ok(());
+    }
 
-let new_exp = prog.exp.saturating_add(windows);
-prog.exp = new_exp.min(need_exp);
+    let new_exp = prog.exp.saturating_add(windows);
+    prog.exp = new_exp.min(need_exp);
 
-prog.last_exp_claim_ts = prog
-    .last_exp_claim_ts
-    .saturating_add((windows as i64).saturating_mul(window));
+    prog.last_exp_claim_ts = prog
+        .last_exp_claim_ts
+        .saturating_add((windows as i64).saturating_mul(window));
 
     Ok(())
 }

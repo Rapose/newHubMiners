@@ -5,15 +5,8 @@ use crate::constants::*;
 use crate::errors::MoeError;
 use crate::state::{EquipmentInventoryState, EquipmentState, MinerState};
 use crate::utils::equipment_balance::{
-    hand_power_bps_by_tier,
-    head_discount_bps_by_tier,
-    remelt_cost_ess,
-    SLOT_HAND,
-    SLOT_HEAD,
+    hand_power_bps_by_tier, head_discount_bps_by_tier, remelt_cost_ess, SLOT_HAND, SLOT_HEAD,
 };
-
-
-
 
 fn idx(level: u8) -> Result<usize> {
     if level < 1 {
@@ -102,6 +95,10 @@ pub fn handler_init(ctx: Context<EquipmentInit>) -> Result<()> {
         ctx.accounts.owner.key(),
         MoeError::Unauthorized
     );
+    require!(
+        !ctx.accounts.miner_state.listed,
+        MoeError::AssetListedLocked
+    );
 
     let eq = &mut ctx.accounts.equipment;
 
@@ -175,12 +172,7 @@ fn inv_consume_1_head_equippable(inv: &mut EquipmentInventoryState, level: u8) -
     err!(MoeError::NoItemAvailable)
 }
 
-
-
-pub fn handler_replace_hand(
-    ctx: Context<EquipmentReplaceHand>,
-    new_level: u8,
-) -> Result<()> {
+pub fn handler_replace_hand(ctx: Context<EquipmentReplaceHand>, new_level: u8) -> Result<()> {
     require_keys_eq!(
         ctx.accounts.miner_state.owner,
         ctx.accounts.owner.key(),
@@ -195,6 +187,11 @@ pub fn handler_replace_hand(
         ctx.accounts.equipment.miner,
         ctx.accounts.miner_state.key(),
         MoeError::InvalidMinerRef
+    );
+
+    require!(
+        !ctx.accounts.miner_state.listed,
+        MoeError::AssetListedLocked
     );
 
     let eq = &mut ctx.accounts.equipment;
@@ -213,8 +210,8 @@ pub fn handler_replace_hand(
 
     // equipa o novo (sempre não-remelted via replace)
     eq.hand_level = new_level;
-eq.hand_power_bps = hand_power_bps_by_tier(new_level)?;
-eq.hand_is_remelted = was_remelted;
+    eq.hand_power_bps = hand_power_bps_by_tier(new_level)?;
+    eq.hand_is_remelted = was_remelted;
 
     Ok(())
 }
@@ -245,10 +242,7 @@ pub struct EquipmentReplaceHand<'info> {
 // REPLACE HEAD
 // =========================
 
-pub fn handler_replace_head(
-    ctx: Context<EquipmentReplaceHead>,
-    new_level: u8,
-) -> Result<()> {
+pub fn handler_replace_head(ctx: Context<EquipmentReplaceHead>, new_level: u8) -> Result<()> {
     require_keys_eq!(
         ctx.accounts.miner_state.owner,
         ctx.accounts.owner.key(),
@@ -265,6 +259,11 @@ pub fn handler_replace_head(
         MoeError::InvalidMinerRef
     );
 
+    require!(
+        !ctx.accounts.miner_state.listed,
+        MoeError::AssetListedLocked
+    );
+
     let eq = &mut ctx.accounts.equipment;
     let inv = &mut ctx.accounts.inventory;
 
@@ -277,8 +276,8 @@ pub fn handler_replace_head(
     }
 
     eq.head_level = new_level;
-eq.head_recharge_discount_bps = head_discount_bps_by_tier(new_level)?;
-eq.head_is_remelted = was_remelted;
+    eq.head_recharge_discount_bps = head_discount_bps_by_tier(new_level)?;
+    eq.head_is_remelted = was_remelted;
 
     Ok(())
 }
@@ -309,10 +308,7 @@ pub struct EquipmentReplaceHead<'info> {
 // REMELT HAND
 // =========================
 
-pub fn handler_remelt_hand(
-    ctx: Context<EquipmentRemeltHand>,
-    base_level: u8,
-) -> Result<()> {
+pub fn handler_remelt_hand(ctx: Context<EquipmentRemeltHand>, base_level: u8) -> Result<()> {
     let ess_cost = remelt_cost_ess(SLOT_HAND, base_level)?;
 
     let _ = idx(base_level)?;
@@ -335,6 +331,11 @@ pub fn handler_remelt_hand(
         ctx.accounts.equipment.miner,
         ctx.accounts.miner_state.key(),
         MoeError::InvalidMinerRef
+    );
+
+    require!(
+        !ctx.accounts.miner_state.listed,
+        MoeError::AssetListedLocked
     );
 
     let inv = &mut ctx.accounts.inventory;
@@ -364,7 +365,7 @@ pub fn handler_remelt_hand(
     )?;
 
     let i_new = idx(new_level)?;
-inv.new_hand_remelted[i_new] = inv.new_hand_remelted[i_new].saturating_add(1);
+    inv.new_hand_remelted[i_new] = inv.new_hand_remelted[i_new].saturating_add(1);
 
     Ok(())
 }
@@ -403,10 +404,7 @@ pub struct EquipmentRemeltHand<'info> {
 // REMELT HEAD
 // =========================
 
-pub fn handler_remelt_head(
-    ctx: Context<EquipmentRemeltHead>,
-    base_level: u8,
-) -> Result<()>{
+pub fn handler_remelt_head(ctx: Context<EquipmentRemeltHead>, base_level: u8) -> Result<()> {
     let ess_cost = remelt_cost_ess(SLOT_HEAD, base_level)?;
 
     let _ = idx(base_level)?;
@@ -431,6 +429,11 @@ pub fn handler_remelt_head(
         MoeError::InvalidMinerRef
     );
 
+    require!(
+        !ctx.accounts.miner_state.listed,
+        MoeError::AssetListedLocked
+    );
+
     let inv = &mut ctx.accounts.inventory;
     let eq = &mut ctx.accounts.equipment;
 
@@ -452,7 +455,7 @@ pub fn handler_remelt_head(
     )?;
 
     let i_new = idx(new_level)?;
-inv.new_head_remelted[i_new] = inv.new_head_remelted[i_new].saturating_add(1);
+    inv.new_head_remelted[i_new] = inv.new_head_remelted[i_new].saturating_add(1);
 
     Ok(())
 }

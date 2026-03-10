@@ -28,3 +28,6 @@ pub use equipment::*;
 
 pub mod equipment_inventory;
 pub use equipment_inventory::*;
+
+pub mod listing;
+pub use listing::*;

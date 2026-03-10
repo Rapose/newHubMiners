@@ -24,6 +24,7 @@ pub fn handler_initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
     cfg.paused = false;
     cfg.next_miner_id = 0;
     cfg.next_land_id = 0;
+    cfg.next_listing_id = 0;
     cfg.bump = ctx.bumps.config;
     Ok(())
 }
